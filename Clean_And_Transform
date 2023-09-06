@@ -1,0 +1,84 @@
+## First Querey to observe Data Set
+
+SELECT *
+FROM `pokemon.pokemon_data`
+ORDER BY Dex_No ASC
+
+## I noticed Multiple entries per Dex Number, cleaning data to one entry per Dex Number by removing regional variants, Mega Forms, etc.
+### Clean by creating New Table with DISTINCT Dex_No and Base_Name
+
+CREATE TABLE pokemon.cleaned_pokemon_data AS
+SELECT DISTINCT Dex_No, Base_Name
+FROM `pokemon.pokemon_data` 
+
+## this creates distinct list of 1010 unique Base Names. Now to add the Type_1 and Type_2 to the new table.
+### Utilize LEFT JOIN to bring values in, and MAX columns to allow Grouping by Dex_No to prevent duplicates. Add aliases for tables
+
+SELECT
+  MAX(clean.Dex_No),
+  MAX(clean.Base_Name),
+  MAX(dirty.Type_1),
+  MAX(dirty.Type_2)
+FROM `pokemon.cleaned_pokemon_data` clean
+LEFT JOIN `pokemon.pokemon_data` dirty
+ON (
+  clean.Base_Name = dirty.Base_Name
+)
+GROUP BY clean.Dex_No
+ORDER BY clean.Dex_No ASC
+
+## I export this table as 'cleaned_pokemon_data_final', and fix column names
+
+ALTER TABLE `pokemon.FinalClean`
+RENAME COLUMN f0_ TO Dex_No,
+RENAME COLUMN f1_ TO Name,
+RENAME COLUMN f2_ TO Type_1,
+RENAME COLUMN f3_ TO Type_2
+
+## I add a column "Gen" which the reflects the generation each Pokemon Debuted in.
+
+ALTER TABLE `pokemon.cleaned_pokemon_data_final`
+ADD COLUMN Gen INT
+
+## I input the values for each Pokemon's Generation - had trouble using a comprehensive CASE so instead opted to update each Generation individually
+
+UPDATE `pokemon.cleaned_pokemon_data_final`
+SET Gen = 1 
+WHERE Dex_No BETWEEN 1 AND 151
+
+UPDATE `pokemon.cleaned_pokemon_data_final`
+SET Gen = 2 
+WHERE Dex_No BETWEEN 152 AND 251
+
+## Mirrored above syntax for rest of Generations (3-9)
+
+## Create Type_Combo Column
+
+SELECT
+CONCAT(Type_1, ' ',Type_2) AS Type_Combo,
+Dex_No
+FROM `pokemon.cleaned_pokemon_data_final`
+WHERE Type_2 != '-'
+
+## Export Type_Combo/Dex_No as seperate table to join with existing table, JOIN for final table
+
+SELECT
+clean.Dex_No,
+clean.Name,
+clean.Type_1,
+clean.Type_2,
+combo.Type_Combo,
+clean.Gen
+FROM `pokemon.cleaned_pokemon_data_final` clean
+LEFT JOIN `pokemon.Type_Combos` combo
+ON (
+  clean.Dex_No = combo.Dex_No
+)
+ORDER BY Dex_No ASC
+
+##Export as Final_pokemon_data and bring to Tableau for visualization!
+
+
+
+
+
